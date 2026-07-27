@@ -15,6 +15,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@editorjs/list@1.10.0"></script>
   <!-- Plugin para Títulos (H2, H3, H4) -->
   <script src="https://cdn.jsdelivr.net/npm/@editorjs/header@2.8.1"></script>
+  <!-- Plugin para Tablas -->
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/table@2.4.1"></script>
   <script type="importmap">
     {
       "imports": {
@@ -452,6 +454,15 @@
       margin: 0 auto !important;
       /* Centra la imagen horizontalmente */
     }
+
+    table {
+      border-spacing: 0;
+      width: 100%;
+    }
+
+    td {
+      word-break: break-word;
+    }
   </style>
 </head>
 
@@ -528,6 +539,17 @@
                         style="font-size: 0.9rem;"></li>
                     </ul>
                   </div>
+                  <!-- tables -->
+                  <div v-else-if="block.type === 'table'" style="margin: 0.5rem 0; overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; border: 1px solid var(--border);">
+                      <tr v-for="(row, rIdx) in block.data.content" :key="rIdx">
+                        <td v-for="(cell, cIdx) in row" :key="cIdx" v-html="formatLinks(cell)"
+                          style="border: 1px solid var(--border); padding: 8px; font-size: 0.9rem;">
+                        </td>
+                      </tr>
+                    </table>
+                  </div>
+                  <!-- images -->
                   <div v-else-if="block.type === 'image'" style="margin-top: 0.25rem; text-align: center;">
                     <img :src="block.data.file.url" style="max-width: 150px; border-radius: 4px;" />
                   </div>
@@ -599,6 +621,16 @@
                     <ul v-else style="margin: 0; padding: 0; list-style-type: disc;">
                       <li v-for="(item, i) in block.data.items" :key="i" v-html="formatLinks(item)"></li>
                     </ul>
+                  </div>
+                  <!-- tables -->
+                  <div v-else-if="block.type === 'table'" style="margin: 0.5rem 0; overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; border: 1px solid var(--border);">
+                      <tr v-for="(row, rIdx) in block.data.content" :key="rIdx">
+                        <td v-for="(cell, cIdx) in row" :key="cIdx" v-html="formatLinks(cell)"
+                          style="border: 1px solid var(--border); padding: 6px 8px; font-size: 0.85rem;">
+                        </td>
+                      </tr>
+                    </table>
                   </div>
                   <div v-else-if="block.type === 'image'" style="margin-top: 0.5rem; text-align: center;">
                     <img :src="block.data.file.url" :alt="block.data.caption"
@@ -947,7 +979,7 @@
 
           adminQuestionEditor = new EditorJS({
             holder: containerId,
-            placeholder: 'Escribe tu pregunta enriquecida aquí (agrega listas, títulos o imágenes para tus alumnos)...',
+            placeholder: 'Write a question for your students here ...',
             tools: {
               header: {
                 class: Header,
@@ -958,6 +990,11 @@
                 class: List,
                 inlineToolbar: true,
                 config: { defaultStyle: 'unordered' }
+              },
+              table: {
+                class: Table,
+                inlineToolbar: true,
+                config: { rows: 2, cols: 3 }
               },
               image: {
                 class: ImageTool,
@@ -993,6 +1030,11 @@
                   class: List,
                   inlineToolbar: true,
                   config: { defaultStyle: 'unordered' }
+                },
+                table: {
+                  class: Table,
+                  inlineToolbar: true,
+                  config: { rows: 2, cols: 3 }
                 },
                 image: {
                   class: ImageTool,
@@ -1063,7 +1105,7 @@
               }
             })
             .subscribe()
-            // NUEVO: Escuchar cambios de pestaña para regenerar los editores del estudiante
+          // NUEVO: Escuchar cambios de pestaña para regenerar los editores del estudiante
           watch(currentView, (newView) => {
             if (!isAdmin.value && newView === 'questions') {
               // Esperamos un tick del DOM para que los divs con id="editor-xxx" existan de nuevo
@@ -1073,7 +1115,7 @@
             }
           })
         })
-        
+
         onUnmounted(() => {
           if (realtimeChannel) supabase.removeChannel(realtimeChannel)
           // Destruye los editores activos al desmontar
