@@ -17,6 +17,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@editorjs/header@2.8.1"></script>
   <!-- Plugin para Tablas -->
   <script src="https://cdn.jsdelivr.net/npm/@editorjs/table@2.4.1"></script>
+  <!-- Plugin para Embeds (YouTube, Vimeo, etc.) -->
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/embed@2.7.0"></script>
   <script type="importmap">
     {
       "imports": {
@@ -541,6 +543,11 @@
                   <div v-else-if="block.type === 'image'" style="margin-top: 0.25rem; text-align: center;">
                     <img :src="block.data.file.url" style="max-width: 150px; border-radius: 4px;" />
                   </div>
+                  <div v-else-if="block.type === 'embed'" style="margin: 0.5rem 0; text-align: center;">
+                    <div class="video-container">
+                      <iframe :src="block.data.embed" allowfullscreen frameborder="0"></iframe>
+                    </div>
+                  </div>
                 </div>
               </div>
               <p v-else class="question-text" style="display: inline; margin-left: 0.5rem;">{{ q.question_text }}</p>
@@ -600,6 +607,11 @@
                 </div>
                 <div v-else-if="block.type === 'image'" style="margin-top: 0.25rem; text-align: center;">
                   <img :src="block.data.file.url" style="max-width: 100%; border-radius: 6px;" />
+                </div>
+                <div v-else-if="block.type === 'embed'" style="margin: 0.5rem 0; text-align: center;">
+                  <div class="video-container">
+                    <iframe :src="block.data.embed" allowfullscreen frameborder="0"></iframe>
+                  </div>
                 </div>
               </div>
             </div>
@@ -665,6 +677,11 @@
                     <small v-if="block.data.caption"
                       style="display: block; color: var(--text-muted); font-style: italic;">{{ block.data.caption
                       }}</small>
+                  </div>
+                  <div v-else-if="block.type === 'embed'" style="margin: 0.5rem 0; text-align: center;">
+                    <div class="video-container">
+                      <iframe :src="block.data.embed" allowfullscreen frameborder="0"></iframe>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -777,6 +794,11 @@
                             <small v-if="block.data.caption"
                               style="display: block; color: var(--text-muted); font-style: italic; margin-top: 2px;">{{
                               block.data.caption }}</small>
+                          </div>
+                          <div v-else-if="block.type === 'embed'" style="margin: 0.5rem 0; text-align: center;">
+                            <div class="video-container">
+                              <iframe :src="block.data.embed" allowfullscreen frameborder="0"></iframe>
+                            </div>
                           </div>
                         </div>
                       </template>
@@ -1053,6 +1075,14 @@
               image: {
                 class: ImageTool,
                 config: { uploader: { uploadByFile: uploadImageToSupabase } }
+              },
+              embed: {
+                class: Embed,
+                config: {
+                  services: {
+                    youtube: true
+                  }
+                }
               }
             }
           })
@@ -1094,6 +1124,14 @@
               image: {
                 class: ImageTool,
                 config: { uploader: { uploadByFile: uploadImageToSupabase } }
+              },
+              embed: {
+                class: Embed,
+                config: {
+                  services: {
+                    youtube: true
+                  }
+                }
               }
             }
           })
@@ -1134,6 +1172,14 @@
                 image: {
                   class: ImageTool,
                   config: { uploader: { uploadByFile: uploadImageToSupabase } }
+                },
+                embed: {
+                  class: Embed,
+                  config: {
+                    services: {
+                      youtube: true
+                    }
+                  }
                 }
               },
               onChange: async () => {
