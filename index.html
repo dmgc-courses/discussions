@@ -486,9 +486,11 @@
             </div>
             <!-- 🌟 AGREGAR AQUÍ: Campo de Instrucciones para la actividad -->
             <div class="form-group">
-              <label>INSTRUCTIONS / INTRO TEXT</label>
-              <textarea v-model="sessionInstructions" rows="3"
-                placeholder="Write instructions or context for students..."></textarea>
+              <div class="form-group">
+                <div id="editor-session-instructions"
+                  style="background: var(--bg-main); border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem; color: #000; min-height: 100px;">
+                </div>
+              </div>
             </div>
             <div class="form-group">
               <label>URL Video 1</label>
@@ -563,19 +565,50 @@
           <h2>
             <span>{{sessionTitle}}</span>
             <button @click="currentView = 'board'" class="view-toggle-btn">
-             📋 Go to Board ➔
+              📋 Go to Board ➔
             </button>
           </h2>
 
           <!-- INSTRUCCIONES: Solo se muestra si sessionInstructions tiene contenido -->
-          <div v-if="sessionInstructions && sessionInstructions.trim()" class="session-instructions-box"
-            style="margin-bottom: 1.5rem;">
+          <div v-if="sessionInstructions" class="session-instructions-box" style="margin-bottom: 1.5rem;">
             <h3
               style="margin-top: 0.5rem; margin-bottom: 0.5rem; color: var(--accent); font-size: 1.1rem; font-weight: 700;">
-              Instructions
+              Instructions & Overview
             </h3>
-            <p style="font-size: 0.95rem; line-height: 1.5; color: var(--text-main); margin: 0; white-space: pre-wrap;">
-              {{ sessionInstructions }}</p>
+
+            <!-- Render rich text blocks if JSON -->
+            <div v-if="isJson(sessionInstructions)" class="rendered-question-block">
+              <div v-for="block in JSON.parse(sessionInstructions).blocks" :key="block.id"
+                style="margin-bottom: 0.5rem;">
+                <p v-if="block.type === 'paragraph'" v-html="formatLinks(block.data.text)"
+                  style="margin: 0; font-size: 0.95rem;"></p>
+                <h3 v-else-if="block.type === 'header'" v-html="formatLinks(block.data.text)"
+                  style="margin: 0.5rem 0 0.25rem 0; font-size: 1.1rem; font-weight: bold; color: var(--accent);"></h3>
+                <div v-else-if="block.type === 'list'" style="margin: 0.25rem 0; padding-left: 1rem;">
+                  <ul style="margin: 0; padding: 0; list-style-type: disc;">
+                    <li v-for="(item, i) in block.data.items" :key="i" v-html="formatLinks(item)"
+                      style="font-size: 0.9rem;"></li>
+                  </ul>
+                </div>
+                <div v-else-if="block.type === 'table'" style="margin: 0.5rem 0; overflow-x: auto;">
+                  <table style="width: 100%; border-collapse: collapse; border: 1px solid var(--border);">
+                    <tr v-for="(row, rIdx) in block.data.content" :key="rIdx">
+                      <td v-for="(cell, cIdx) in row" :key="cIdx" v-html="formatLinks(cell)"
+                        style="border: 1px solid var(--border); padding: 8px; font-size: 0.9rem;"></td>
+                    </tr>
+                  </table>
+                </div>
+                <div v-else-if="block.type === 'image'" style="margin-top: 0.25rem; text-align: center;">
+                  <img :src="block.data.file.url" style="max-width: 100%; border-radius: 6px;" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Fallback for old plain-text instructions -->
+            <p v-else
+              style="font-size: 0.95rem; line-height: 1.5; color: var(--text-main); margin: 0; white-space: pre-wrap;">
+              {{ sessionInstructions }}
+            </p>
           </div>
 
           <div class="video-gallery" v-if="youtubeEmbedUrls.length > 0">
@@ -590,7 +623,7 @@
           </div>
 
           <!-- BARRA DE NAVEGACIÓN SUPERIOR (SOLO ALUMNOS) -->
-       
+
           <div class="form-group"
             style="background: var(--bg-main); padding: 1rem; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 1.5rem;">
             <label style="color: var(--accent); font-weight: 700;">👤 Your Name</label>
@@ -770,8 +803,8 @@
 
   <!-- SCRIPT DE CONFIGURACIÓN VUE (Híbrido para preguntas del profesor) -->
   <script type="module">
-    import {createApp, ref, onMounted, onUnmounted, computed, watch} from 'vue'
-    import {createClient} from '@supabase/supabase-js'
+    import { createApp, ref, onMounted, onUnmounted, computed, watch } from 'vue'
+    import { createClient } from '@supabase/supabase-js'
 
     createApp({
       setup() {
@@ -791,6 +824,7 @@
         const answers = ref({})
         const editorInstances = {}
         let adminQuestionEditor = null // Instancia del editor del administrador
+        let adminInstructionsEditor = null // Instancia del editor de instrucciones
         const posts = ref([])
         const studentName = ref(localStorage.getItem('saved_student_name') || '')
         const newQuestionText = ref('')
@@ -811,7 +845,7 @@
         }
 
         const fetchMetadataAndQuestions = async () => {
-          const {data: modData} = await supabase
+          const { data: modData } = await supabase
             .from('case_study_sessions')
             .select('*')
             .eq('id', sessionId.value)
@@ -832,45 +866,54 @@
             youtubeEmbedUrls.value = []
           }
 
-          const {data: qData} = await supabase
+          const { data: qData } = await supabase
             .from('case_study_questions')
             .select('*')
             .eq('session_id', sessionId.value)
-            .order('order_index', {ascending: true})
+            .order('order_index', { ascending: true })
 
           if (qData) {
             questions.value = qData
-            qData.forEach(q => {if (!answers.value[q.id]) answers.value[q.id] = ''})
+            qData.forEach(q => { if (!answers.value[q.id]) answers.value[q.id] = '' })
 
             // Re-inicializar editores de los estudiantes si no somos admin
             if (!isAdmin.value) {
-              setTimeout(() => {initStudentEditors()}, 100)
+              setTimeout(() => { initStudentEditors() }, 100)
             } else {
               // Si somos admin, inicializamos el editor creador de preguntas
-              setTimeout(() => {initAdminEditor()}, 100)
+              setTimeout(() => {
+                initAdminEditor()
+                initInstructionsEditor(sessionInstructions.value)
+              }, 100)
             }
           }
         }
 
         const updateSessionMetadata = async () => {
+          let savedInstructions = sessionInstructions.value
+          if (adminInstructionsEditor) {
+            const editorData = await adminInstructionsEditor.save()
+            savedInstructions = JSON.stringify(editorData)
+          }
+
           const joinedUrls = youtubeUrls.value.map(u => u.trim()).filter(u => u !== '').join(',')
-          const {error} = await supabase
+          const { error } = await supabase
             .from('case_study_sessions')
             .upsert({
               id: sessionId.value,
               title: sessionTitle.value,
-              instructions: sessionInstructions.value, // 🌟 AGREGAR ESTA LÍNEA
+              instructions: savedInstructions,
               youtube_url: joinedUrls
             })
 
           if (!error) {
+            sessionInstructions.value = savedInstructions
             youtubeEmbedUrls.value = youtubeUrls.value
               .map(url => formatYoutubeUrl(url))
               .filter(embed => embed !== null)
-            alert('¡Título y videos actualizados correctamente!')
+            alert('¡Título, instrucciones y videos actualizados correctamente!')
           }
         }
-
         // AGREGAR PREGUNTA USANDO EL EDITOR ENRIQUECIDO
         const addQuestion = async () => {
           if (!adminQuestionEditor) return
@@ -886,7 +929,7 @@
           const nextIndex = questions.value.length + 1
 
           // Guardamos el objeto JSON completo convertido en string
-          const {error} = await supabase
+          const { error } = await supabase
             .from('case_study_questions')
             .insert([{
               id: randomId,
@@ -911,11 +954,11 @@
         }
 
         const fetchPosts = async () => {
-          const {data, error} = await supabase
+          const { data, error } = await supabase
             .from('case_study_responses_v2')
             .select('*')
             .eq('session_id', sessionId.value)
-            .order('created_at', {ascending: false})
+            .order('created_at', { ascending: false })
 
           if (!error) posts.value = data
         }
@@ -930,7 +973,7 @@
 
         const submitAnswers = async () => {
           if (!studentName.value.trim() || !allQuestionsAnswered.value) return
-          const {error} = await supabase
+          const { error } = await supabase
             .from('case_study_responses_v2')
             .insert([{
               student_name: studentName.value,
@@ -954,7 +997,7 @@
         }
 
         const formatTime = (dateString) => {
-          return new Date(dateString).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})
+          return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
 
         const uploadImageToSupabase = async (file) => {
@@ -963,19 +1006,19 @@
             const cleanName = file.name.replace(/[^a-zA-Z0-9]/g, '_');
             const fileName = `${Date.now()}_${cleanName}.${fileExt}`
 
-            const {data, error} = await supabase.storage
+            const { data, error } = await supabase.storage
               .from('imagenes-respuestas')
-              .upload(fileName, file, {cacheControl: '3600', upsert: false})
+              .upload(fileName, file, { cacheControl: '3600', upsert: false })
 
-            if (error) return {success: 0}
+            if (error) return { success: 0 }
 
-            const {data: {publicUrl}} = supabase.storage
+            const { data: { publicUrl } } = supabase.storage
               .from('imagenes-respuestas')
               .getPublicUrl(fileName)
 
-            return {success: 1, file: {url: publicUrl}}
+            return { success: 1, file: { url: publicUrl } }
           } catch (err) {
-            return {success: 0}
+            return { success: 0 }
           }
         }
 
@@ -995,21 +1038,62 @@
               header: {
                 class: Header,
                 inlineToolbar: ['link', 'bold', 'italic'],
-                config: {levels: [2, 3, 4], defaultLevel: 3}
+                config: { levels: [2, 3, 4], defaultLevel: 3 }
               },
               list: {
                 class: List,
                 inlineToolbar: true,
-                config: {defaultStyle: 'unordered'}
+                config: { defaultStyle: 'unordered' }
               },
               table: {
                 class: Table,
                 inlineToolbar: true,
-                config: {rows: 2, cols: 3}
+                config: { rows: 2, cols: 3 }
               },
               image: {
                 class: ImageTool,
-                config: {uploader: {uploadByFile: uploadImageToSupabase}}
+                config: { uploader: { uploadByFile: uploadImageToSupabase } }
+              }
+            }
+          })
+        }
+
+        const initInstructionsEditor = (initialData = null) => {
+          if (adminInstructionsEditor && typeof adminInstructionsEditor.destroy === 'function') {
+            adminInstructionsEditor.destroy()
+          }
+
+          const containerId = 'editor-session-instructions'
+          if (!document.getElementById(containerId)) return
+
+          let data = null;
+          if (initialData && isJson(initialData)) {
+            data = JSON.parse(initialData)
+          }
+
+          adminInstructionsEditor = new EditorJS({
+            holder: containerId,
+            placeholder: 'Write instructions or overview here...',
+            data: data,
+            tools: {
+              header: {
+                class: Header,
+                inlineToolbar: ['link', 'bold', 'italic'],
+                config: { levels: [2, 3, 4], defaultLevel: 3 }
+              },
+              list: {
+                class: List,
+                inlineToolbar: true,
+                config: { defaultStyle: 'unordered' }
+              },
+              table: {
+                class: Table,
+                inlineToolbar: true,
+                config: { rows: 2, cols: 3 }
+              },
+              image: {
+                class: ImageTool,
+                config: { uploader: { uploadByFile: uploadImageToSupabase } }
               }
             }
           })
@@ -1035,21 +1119,21 @@
                 header: {
                   class: Header,
                   inlineToolbar: ['link', 'bold', 'italic'],
-                  config: {levels: [2, 3, 4], defaultLevel: 3}
+                  config: { levels: [2, 3, 4], defaultLevel: 3 }
                 },
                 list: {
                   class: List,
                   inlineToolbar: true,
-                  config: {defaultStyle: 'unordered'}
+                  config: { defaultStyle: 'unordered' }
                 },
                 table: {
                   class: Table,
                   inlineToolbar: true,
-                  config: {rows: 2, cols: 3}
+                  config: { rows: 2, cols: 3 }
                 },
                 image: {
                   class: ImageTool,
-                  config: {uploader: {uploadByFile: uploadImageToSupabase}}
+                  config: { uploader: { uploadByFile: uploadImageToSupabase } }
                 }
               },
               onChange: async () => {
