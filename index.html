@@ -28,26 +28,18 @@
 
   <style>
     :root {
-      --bg-main: #ffffff;
-      /* Blanco puro */
-      --bg-panel: #fafafa;
-      /* Gris sutil para panel lateral */
-      --bg-card: #ffffff;
-      /* Tarjetas limpias sobre fondo */
+      /* Fondo general transparente o con leve velo para no perder legibilidad */
+      --bg-main: transparent;
+
+      /* Paneles y tarjetas con fondo blanco semi-transparente (0.85 o 0.9 de opacidad) */
+      --bg-panel: rgba(255, 255, 255, 0.85);
+      --bg-card: rgba(255, 255, 255, 0.92);
+
       --text-main: #111111;
-      /* Negro para texto principal */
-      --text-muted: #666666;
-      /* Gris medio para textos secundarios */
+      --text-muted: #555555;
       --accent: #111111;
-      /* Negro puro para botones y nombres */
-      --accent-hover: #333333;
-      /* Gris oscuro para hover */
-      --border: #e5e5e5;
-      /* Bordes delgados y muy tenues */
-      --danger: #ff3333;
-      /* Rojo para botones críticos */
-      --success: #111111;
-      /* Unificado a negro para mantener minimalismo */
+      --border: rgba(0, 0, 0, 0.12);
+      /* Bordes suaves */
     }
 
     body,
@@ -55,10 +47,20 @@
       margin: 0;
       padding: 0;
       height: 100vh;
-      background-color: var(--bg-main);
+      /* Importante: fondo transparente en el body para que deje ver el iframe */
+      background-color: transparent !important;
       color: var(--text-main);
       font-family: 'Segoe UI', Roboto, Arial, sans-serif;
       -webkit-font-smoothing: antialiased;
+    }
+
+    /* Permitir que los paneles de la izquierda y derecha dejen pasar el fondo */
+    .input-panel,
+    .feed-panel {
+      background: var(--bg-panel);
+      backdrop-filter: blur(8px);
+      /* Aplica un efecto de desfoque elegante al fondo de Reveal.js */
+      -webkit-backdrop-filter: blur(8px);
     }
 
     .app-container {
@@ -80,7 +82,7 @@
     .input-panel {
       width: 100%;
       height: 80vh;
-      background: var(--bg-panel);
+      /* background: var(--bg-panel); */
       z-index: 10;
       transition: all 0.3s ease;
       overflow-y: auto;
@@ -89,7 +91,7 @@
     .feed-panel {
       width: 100%;
       height: 80vh;
-      background: var(--bg-main);
+      /* background: var(--bg-main); */
       transition: all 0.3s ease;
       overflow-y: auto;
     }
@@ -469,16 +471,7 @@
 <body>
   <div id="app">
 
-    <!-- BARRA DE NAVEGACIÓN SUPERIOR (SOLO ALUMNOS) -->
-    <div v-if="!isAdmin" class="view-navigation-bar"
-      style="display: flex; gap: 1rem; padding: 1rem; background: var(--bg-panel); border-bottom: 1px solid var(--border);">
-      <button :class="['nav-tab', { active: currentView === 'questions' }]" @click="currentView = 'questions'">
-        ✍️ Activity Questions
-      </button>
-      <button :class="['nav-tab', { active: currentView === 'board' }]" @click="currentView = 'board'">
-        📋 Activity Board ({{ posts.length }})
-      </button>
-    </div>
+
 
     <div class="app-container">
 
@@ -503,6 +496,12 @@
             <div class="form-group">
               <label>MODULE/SESSION TITLE</label>
               <input v-model="sessionTitle" type="text" />
+            </div>
+            <!-- 🌟 AGREGAR AQUÍ: Campo de Instrucciones para la actividad -->
+            <div class="form-group">
+              <label>INSTRUCTIONS / INTRO TEXT</label>
+              <textarea v-model="sessionInstructions" rows="3"
+                placeholder="Write instructions or context for students..."></textarea>
             </div>
             <div class="form-group">
               <label>URL Video 1</label>
@@ -575,16 +574,23 @@
         <!-- SUB-PANEL: VISTA EXCLUSIVA DEL ESTUDIANTE (CONTRALOR DE RESPUESTAS) -->
         <div v-else>
           <h2>
-            <span>Activity Questions</span>
+            <span>Activity: {{sessionTitle}}</span>
             <button @click="currentView = 'board'" class="view-toggle-btn">
               Go to Board ➔
             </button>
           </h2>
 
           <!-- session title -->
-          <!-- <div class="session-header-display">
+          <div class="session-header-display">
             <h3 style="margin-top: 0; margin-bottom: 1.5rem; color: var(--accent);">{{ sessionTitle }}</h3>
-          </div> -->
+          </div>
+
+          <!-- 🌟 AGREGAR AQUÍ: Título e Instrucciones visibles para el estudiante -->
+          <div v-if="sessionInstructions" class="session-instructions-box"
+            style="margin-bottom: 1.5rem; white-space: pre-wrap;">
+            <p style="font-size: 1rem; line-height: 1.5; color: var(--text-main); margin: 0;">{{ sessionInstructions }}
+            </p>
+          </div>
 
           <div class="video-gallery" v-if="youtubeEmbedUrls.length > 0">
             <div v-for="(embedUrl, index) in youtubeEmbedUrls" :key="index" class="video-wrapper">
@@ -595,6 +601,17 @@
                   allowfullscreen></iframe>
               </div>
             </div>
+          </div>
+
+          <!-- BARRA DE NAVEGACIÓN SUPERIOR (SOLO ALUMNOS) -->
+          <div v-if="!isAdmin" class="view-navigation-bar"
+            style="display: flex; gap: 1rem; padding: 1rem; background: var(--bg-panel); border-bottom: 1px solid var(--border);">
+            <button :class="['nav-tab', { active: currentView === 'questions' }]" @click="currentView = 'questions'">
+              ✍️ Activity Questions
+            </button>
+            <button :class="['nav-tab', { active: currentView === 'board' }]" @click="currentView = 'board'">
+              📋 Activity Board ({{ posts.length }})
+            </button>
           </div>
 
           <div class="form-group"
@@ -776,8 +793,8 @@
 
   <!-- SCRIPT DE CONFIGURACIÓN VUE (Híbrido para preguntas del profesor) -->
   <script type="module">
-    import { createApp, ref, onMounted, onUnmounted, computed, watch } from 'vue'
-    import { createClient } from '@supabase/supabase-js'
+    import {createApp, ref, onMounted, onUnmounted, computed, watch} from 'vue'
+    import {createClient} from '@supabase/supabase-js'
 
     createApp({
       setup() {
@@ -790,6 +807,7 @@
         const isAdmin = computed(() => urlParams.get('admin') === 'profesor123')
 
         const sessionTitle = ref('Loading module...')
+        const sessionInstructions = ref('') // 🌟 AGREGAR ESTA LÍNEA
         const youtubeUrls = ref(['', '', ''])
         const youtubeEmbedUrls = ref([])
         const questions = ref([])
@@ -816,7 +834,7 @@
         }
 
         const fetchMetadataAndQuestions = async () => {
-          const { data: modData } = await supabase
+          const {data: modData} = await supabase
             .from('case_study_sessions')
             .select('*')
             .eq('id', sessionId.value)
@@ -824,6 +842,7 @@
 
           if (modData) {
             sessionTitle.value = modData.title
+            sessionInstructions.value = modData.instructions || '' // 🌟 AGREGAR ESTA LÍNEA
             let savedUrls = modData.youtube_url ? modData.youtube_url.split(',') : []
             youtubeUrls.value = [savedUrls[0] || '', savedUrls[1] || '', savedUrls[2] || '']
             youtubeEmbedUrls.value = youtubeUrls.value
@@ -831,37 +850,39 @@
               .filter(embed => embed !== null)
           } else if (isAdmin.value) {
             sessionTitle.value = `Nuevo Módulo: ${sessionId.value}`
+            sessionInstructions.value = '' // 🌟 AGREGAR ESTA LÍNEA
             youtubeUrls.value = ['', '', '']
             youtubeEmbedUrls.value = []
           }
 
-          const { data: qData } = await supabase
+          const {data: qData} = await supabase
             .from('case_study_questions')
             .select('*')
             .eq('session_id', sessionId.value)
-            .order('order_index', { ascending: true })
+            .order('order_index', {ascending: true})
 
           if (qData) {
             questions.value = qData
-            qData.forEach(q => { if (!answers.value[q.id]) answers.value[q.id] = '' })
+            qData.forEach(q => {if (!answers.value[q.id]) answers.value[q.id] = ''})
 
             // Re-inicializar editores de los estudiantes si no somos admin
             if (!isAdmin.value) {
-              setTimeout(() => { initStudentEditors() }, 100)
+              setTimeout(() => {initStudentEditors()}, 100)
             } else {
               // Si somos admin, inicializamos el editor creador de preguntas
-              setTimeout(() => { initAdminEditor() }, 100)
+              setTimeout(() => {initAdminEditor()}, 100)
             }
           }
         }
 
         const updateSessionMetadata = async () => {
           const joinedUrls = youtubeUrls.value.map(u => u.trim()).filter(u => u !== '').join(',')
-          const { error } = await supabase
+          const {error} = await supabase
             .from('case_study_sessions')
             .upsert({
               id: sessionId.value,
               title: sessionTitle.value,
+              instructions: sessionInstructions.value, // 🌟 AGREGAR ESTA LÍNEA
               youtube_url: joinedUrls
             })
 
@@ -888,7 +909,7 @@
           const nextIndex = questions.value.length + 1
 
           // Guardamos el objeto JSON completo convertido en string
-          const { error } = await supabase
+          const {error} = await supabase
             .from('case_study_questions')
             .insert([{
               id: randomId,
@@ -913,11 +934,11 @@
         }
 
         const fetchPosts = async () => {
-          const { data, error } = await supabase
+          const {data, error} = await supabase
             .from('case_study_responses_v2')
             .select('*')
             .eq('session_id', sessionId.value)
-            .order('created_at', { ascending: false })
+            .order('created_at', {ascending: false})
 
           if (!error) posts.value = data
         }
@@ -932,7 +953,7 @@
 
         const submitAnswers = async () => {
           if (!studentName.value.trim() || !allQuestionsAnswered.value) return
-          const { error } = await supabase
+          const {error} = await supabase
             .from('case_study_responses_v2')
             .insert([{
               student_name: studentName.value,
@@ -956,7 +977,7 @@
         }
 
         const formatTime = (dateString) => {
-          return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          return new Date(dateString).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})
         }
 
         const uploadImageToSupabase = async (file) => {
@@ -965,19 +986,19 @@
             const cleanName = file.name.replace(/[^a-zA-Z0-9]/g, '_');
             const fileName = `${Date.now()}_${cleanName}.${fileExt}`
 
-            const { data, error } = await supabase.storage
+            const {data, error} = await supabase.storage
               .from('imagenes-respuestas')
-              .upload(fileName, file, { cacheControl: '3600', upsert: false })
+              .upload(fileName, file, {cacheControl: '3600', upsert: false})
 
-            if (error) return { success: 0 }
+            if (error) return {success: 0}
 
-            const { data: { publicUrl } } = supabase.storage
+            const {data: {publicUrl}} = supabase.storage
               .from('imagenes-respuestas')
               .getPublicUrl(fileName)
 
-            return { success: 1, file: { url: publicUrl } }
+            return {success: 1, file: {url: publicUrl}}
           } catch (err) {
-            return { success: 0 }
+            return {success: 0}
           }
         }
 
@@ -997,21 +1018,21 @@
               header: {
                 class: Header,
                 inlineToolbar: ['link', 'bold', 'italic'],
-                config: { levels: [2, 3, 4], defaultLevel: 3 }
+                config: {levels: [2, 3, 4], defaultLevel: 3}
               },
               list: {
                 class: List,
                 inlineToolbar: true,
-                config: { defaultStyle: 'unordered' }
+                config: {defaultStyle: 'unordered'}
               },
               table: {
                 class: Table,
                 inlineToolbar: true,
-                config: { rows: 2, cols: 3 }
+                config: {rows: 2, cols: 3}
               },
               image: {
                 class: ImageTool,
-                config: { uploader: { uploadByFile: uploadImageToSupabase } }
+                config: {uploader: {uploadByFile: uploadImageToSupabase}}
               }
             }
           })
@@ -1037,21 +1058,21 @@
                 header: {
                   class: Header,
                   inlineToolbar: ['link', 'bold', 'italic'],
-                  config: { levels: [2, 3, 4], defaultLevel: 3 }
+                  config: {levels: [2, 3, 4], defaultLevel: 3}
                 },
                 list: {
                   class: List,
                   inlineToolbar: true,
-                  config: { defaultStyle: 'unordered' }
+                  config: {defaultStyle: 'unordered'}
                 },
                 table: {
                   class: Table,
                   inlineToolbar: true,
-                  config: { rows: 2, cols: 3 }
+                  config: {rows: 2, cols: 3}
                 },
                 image: {
                   class: ImageTool,
-                  config: { uploader: { uploadByFile: uploadImageToSupabase } }
+                  config: {uploader: {uploadByFile: uploadImageToSupabase}}
                 }
               },
               onChange: async () => {
@@ -1140,7 +1161,7 @@
         })
 
         return {
-          studentName, sessionTitle, youtubeUrls, youtubeEmbedUrls,
+          studentName, sessionTitle, sessionInstructions, youtubeUrls, youtubeEmbedUrls,
           questions, answers, posts, isAdmin, newQuestionText, allQuestionsAnswered,
           submitAnswers, deletePost, formatTime, saveName,
           updateSessionMetadata, addQuestion, deleteQuestion, formatLinks, currentView,
