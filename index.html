@@ -422,7 +422,45 @@
       font-size: 1.05rem;
       line-height: 1.5;
       color: var(--text-main);
-      background: white;
+    }
+
+    /* Styled Instructions Container */
+    .session-instructions-box {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px) saturate(160%);
+      -webkit-backdrop-filter: blur(12px) saturate(160%);
+      border: 1px solid var(--border);
+      border-left: 5px solid var(--accent);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+      transition: all 0.3s ease;
+    }
+
+    .session-instructions-box:hover {
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+    }
+
+    /* Ensure proper bullet/decimal display inside rendered blocks */
+    .rendered-question-block ol,
+    .post-body-editorjs ol {
+      list-style-type: decimal !important;
+      padding-left: 1.5rem !important;
+      margin: 0.5rem 0 !important;
+    }
+
+    .rendered-question-block ul,
+    .post-body-editorjs ul {
+      list-style-type: disc !important;
+      padding-left: 1.5rem !important;
+      margin: 0.5rem 0 !important;
+    }
+
+    .rendered-question-block li,
+    .post-body-editorjs li {
+      display: list-item !important;
+      margin-bottom: 0.25rem;
     }
 
     .ce-block__content {
@@ -535,7 +573,8 @@
             </div>
             <!-- 🌟 TOGGLE CHECKBOX HERE -->
             <div class="admin-controls" style="margin-top: 1rem; margin-bottom: 1rem;">
-              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; text-transform: none; font-size: 0.95rem;">
+              <label
+                style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; text-transform: none; font-size: 0.95rem;">
                 <input type="checkbox" v-model="hasQuestions" style="width: auto;">
                 Include student questions / submission board
               </label>
@@ -569,10 +608,15 @@
                     style="margin: 0; font-size: 0.95rem;"></p>
                   <h3 v-else-if="block.type === 'header'" v-html="formatLinks(block.data.text)"
                     style="margin: 0.5rem 0 0.25rem 0; font-size: 1.1rem; font-weight: bold;"></h3>
-                  <div v-else-if="block.type === 'list'" style="margin: 0.25rem 0; padding-left: 1rem;">
-                    <ul style="margin: 0; padding: 0; list-style-type: disc;">
+
+                  <div v-else-if="block.type === 'list'" style="margin: 0.5rem 0; padding-left: 1.2rem;">
+                    <ol v-if="block.data.style === 'ordered'" style="margin: 0; padding: 0; list-style-type: decimal;">
                       <li v-for="(item, i) in block.data.items" :key="i" v-html="formatLinks(item)"
-                        style="font-size: 0.9rem;"></li>
+                        style="font-size: 0.95rem; margin-bottom: 0.25rem;"></li>
+                    </ol>
+                    <ul v-else style="margin: 0; padding: 0; list-style-type: disc;">
+                      <li v-for="(item, i) in block.data.items" :key="i" v-html="formatLinks(item)"
+                        style="font-size: 0.95rem; margin-bottom: 0.25rem;"></li>
                     </ul>
                   </div>
                   <!-- tables -->
@@ -637,12 +681,19 @@
                   style="margin: 0; font-size: 0.95rem;"></p>
                 <h3 v-else-if="block.type === 'header'" v-html="formatLinks(block.data.text)"
                   style="margin: 0.5rem 0 0.25rem 0; font-size: 1.1rem; font-weight: bold; color: var(--accent);"></h3>
-                <div v-else-if="block.type === 'list'" style="margin: 0.25rem 0; padding-left: 1rem;">
-                  <ul style="margin: 0; padding: 0; list-style-type: disc;">
+
+
+                <div v-else-if="block.type === 'list'" style="margin: 0.5rem 0; padding-left: 1.2rem;">
+                  <ol v-if="block.data.style === 'ordered'" style="margin: 0; padding: 0; list-style-type: decimal;">
                     <li v-for="(item, i) in block.data.items" :key="i" v-html="formatLinks(item)"
-                      style="font-size: 0.9rem;"></li>
+                      style="font-size: 0.95rem; margin-bottom: 0.25rem;"></li>
+                  </ol>
+                  <ul v-else style="margin: 0; padding: 0; list-style-type: disc;">
+                    <li v-for="(item, i) in block.data.items" :key="i" v-html="formatLinks(item)"
+                      style="font-size: 0.95rem; margin-bottom: 0.25rem;"></li>
                   </ul>
                 </div>
+
                 <div v-else-if="block.type === 'table'" style="margin: 0.5rem 0; overflow-x: auto;">
                   <table style="width: 100%; border-collapse: collapse; border: 1px solid var(--border);">
                     <tr v-for="(row, rIdx) in block.data.content" :key="rIdx">
@@ -699,14 +750,18 @@
                     style="margin: 0; font-size: 1rem;"></p>
                   <h3 v-else-if="block.type === 'header'" v-html="formatLinks(block.data.text)"
                     style="margin: 0.75rem 0 0.25rem 0; font-weight: 700; color: var(--accent);"></h3>
+
                   <div v-else-if="block.type === 'list'" style="margin: 0.5rem 0; padding-left: 1.2rem;">
-                    <ol v-if="block.data.style === 'ordered'" style="margin: 0; padding: 0;">
-                      <li v-for="(item, i) in block.data.items" :key="i" v-html="formatLinks(item)"></li>
+                    <ol v-if="block.data.style === 'ordered'" style="margin: 0; padding: 0; list-style-type: decimal;">
+                      <li v-for="(item, i) in block.data.items" :key="i" v-html="formatLinks(item)"
+                        style="font-size: 0.95rem; margin-bottom: 0.25rem;"></li>
                     </ol>
                     <ul v-else style="margin: 0; padding: 0; list-style-type: disc;">
-                      <li v-for="(item, i) in block.data.items" :key="i" v-html="formatLinks(item)"></li>
+                      <li v-for="(item, i) in block.data.items" :key="i" v-html="formatLinks(item)"
+                        style="font-size: 0.95rem; margin-bottom: 0.25rem;"></li>
                     </ul>
                   </div>
+
                   <!-- tables -->
                   <div v-else-if="block.type === 'table'" style="margin: 0.5rem 0; overflow-x: auto;">
                     <table style="width: 100%; border-collapse: collapse; border: 1px solid var(--border);">
@@ -811,8 +866,11 @@
                             v-html="formatLinks(block.data.text)"
                             style="margin: 0.75rem 0 0.25rem 0; font-weight: 700; color: var(--accent); font-size: 1rem;">
                           </h4>
+
+
                           <div v-else-if="block.type === 'list'" style="margin: 0.5rem 0; padding-left: 1.2rem;">
-                            <ol v-if="block.data.style === 'ordered'" style="margin: 0; padding: 0;">
+                            <ol v-if="block.data.style === 'ordered'"
+                              style="margin: 0; padding: 0; list-style-type: decimal;">
                               <li v-for="(item, i) in block.data.items" :key="i" v-html="formatLinks(item)"
                                 style="font-size: 0.95rem; margin-bottom: 0.25rem;"></li>
                             </ol>
