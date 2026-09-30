@@ -19,6 +19,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@editorjs/table@2.4.1"></script>
   <!-- Plugin para Embeds (YouTube, Vimeo, etc.) -->
   <script src="https://cdn.jsdelivr.net/npm/@editorjs/embed@2.7.0"></script>
+  <!-- delimiter -->
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/delimiter@latest"></script>
   <script type="importmap">
     {
       "imports": {
@@ -420,6 +422,7 @@
       font-size: 1.05rem;
       line-height: 1.5;
       color: var(--text-main);
+      background: white;
     }
 
     .ce-block__content {
@@ -435,8 +438,44 @@
       padding-bottom: 20px !important;
     }
 
+
+    /* Add roomier spacing between consecutive Editor.js blocks */
+    .ce-block:not(:last-child) {
+      margin-bottom: 1.5rem !important;
+    }
+
+    /* Extra space for paragraphs specifically */
     .ce-paragraph {
-      padding: 5px 0 !important;
+      line-height: 1.7;
+      padding: 0.5rem 0;
+    }
+
+    /* Ensure list styles render properly inside the Editor.js wrapper */
+    .ce-block ol,
+    .codex-editor ol {
+      list-style-type: decimal !important;
+      padding-left: 1.5rem !important;
+      margin-top: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .ce-block ul,
+    .codex-editor ul {
+      list-style-type: disc !important;
+      padding-left: 1.5rem !important;
+      margin-top: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .ce-block li,
+    .codex-editor li {
+      display: list-item !important;
+    }
+
+    .ce-delimiter {
+      line-height: 1.6em;
+      text-align: center;
+      padding: 1rem 0;
     }
 
     img {
@@ -493,6 +532,13 @@
                   style="background: var(--bg-main); border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem; color: #000; min-height: 100px;">
                 </div>
               </div>
+            </div>
+            <!-- 🌟 TOGGLE CHECKBOX HERE -->
+            <div class="admin-controls" style="margin-top: 1rem; margin-bottom: 1rem;">
+              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; text-transform: none; font-size: 0.95rem;">
+                <input type="checkbox" v-model="hasQuestions" style="width: auto;">
+                Include student questions / submission board
+              </label>
             </div>
             <div class="form-group">
               <label>URL Video 1</label>
@@ -578,10 +624,10 @@
 
           <!-- INSTRUCCIONES: Solo se muestra si sessionInstructions tiene contenido -->
           <div v-if="sessionInstructions" class="session-instructions-box" style="margin-bottom: 1.5rem;">
-            <h3
+            <!-- <h3
               style="margin-top: 0.5rem; margin-bottom: 0.5rem; color: var(--accent); font-size: 1.1rem; font-weight: 700;">
               Instructions & Overview
-            </h3>
+            </h3> -->
 
             <!-- Render rich text blocks if JSON -->
             <div v-if="isJson(sessionInstructions)" class="rendered-question-block">
@@ -636,7 +682,7 @@
 
           <!-- BARRA DE NAVEGACIÓN SUPERIOR (SOLO ALUMNOS) -->
 
-          <div class="form-group"
+          <div v-if="hasQuestions" class="form-group"
             style="background: var(--bg-main); padding: 1rem; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 1.5rem;">
             <label style="color: var(--accent); font-weight: 700;">👤 Your Name</label>
             <input v-model="studentName" type="text" placeholder="Ex. Jessica" @change="saveName" />
@@ -850,6 +896,7 @@
         const posts = ref([])
         const studentName = ref(localStorage.getItem('saved_student_name') || '')
         const newQuestionText = ref('')
+        const hasQuestions = ref(true) // Set default to true or false
 
         const currentView = ref('questions')
         let realtimeChannel = null
@@ -1083,7 +1130,8 @@
                     youtube: true
                   }
                 }
-              }
+              },
+              delimiter: Delimiter
             }
           })
         }
@@ -1132,7 +1180,8 @@
                     youtube: true
                   }
                 }
-              }
+              },
+              delimiter: Delimiter
             }
           })
         }
@@ -1180,7 +1229,8 @@
                       youtube: true
                     }
                   }
-                }
+                },
+                delimiter: Delimiter
               },
               onChange: async () => {
                 const savedData = await editorInstances[q.id].save()
@@ -1268,6 +1318,7 @@
         })
 
         return {
+          hasQuestions,
           studentName, sessionTitle, sessionInstructions, youtubeUrls, youtubeEmbedUrls,
           questions, answers, posts, isAdmin, newQuestionText, allQuestionsAnswered,
           submitAnswers, deletePost, formatTime, saveName,
